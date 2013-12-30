@@ -3,11 +3,7 @@ require 'uri'
 require 'net/http'
 require 'nokogiri'
 require 'pp'
-
-YHOO_COOKIE = "add your yahoo cookie here (grab it from request headers cookie)"
-
-LEAGUE_ID = '69523'
-
+require './config'
 
 #
 # Part 1: grab matchup pages and save them in local files (allows iteration on stats logic without
@@ -31,9 +27,9 @@ def html_fname(w, t1, t2)
 end
 
 def fetch_html(week, team1, team2)
-  url = URI.parse("http://basketball.fantasysports.yahoo.com/nba/#{LEAGUE_ID}/matchup?week=#{week}&mid1=#{team1}&mid2=#{team2}")
+  url = URI.parse("http://basketball.fantasysports.yahoo.com/nba/#{Config::LEAGUE_ID}/matchup?week=#{week}&mid1=#{team1}&mid2=#{team2}")
   puts url.request_uri
-  req = Net::HTTP::Get.new(url.request_uri, {"Cookie" => YHOO_COOKIE})
+  req = Net::HTTP::Get.new(url.request_uri, {"Cookie" => Config::YHOO_COOKIE})
   res = Net::HTTP.start(url.host, url.port) {|http| http.request(req) }
   res.body
 end
@@ -43,9 +39,8 @@ end
 #
 
 # summarizes the wins / losses for each stat category by week for a given team
-def summarize_win_loss_close(weekly_stats, team_name = 'Domestic Shorthairs')
+def summarize_win_loss_close(weekly_stats, team_name = Config::MY_TEAM_NAME)
   weekly_stats.group_by {|r| r[:week]}.map do |week, rs|
-    puts "week: #{week}"
     team_row = rs.select {|r| r[:team_name] == team_name}[0]
     others = rs.reject {|r| r[:team_name] == team_name}
     ws = others.map do |ot|
@@ -142,6 +137,7 @@ def main
   weekly_stats = gather_weekly_stats(1, 9)
   final_rows = summarize_win_loss_close(weekly_stats)
 
+  puts ['week'].concat(row_specs.slice(1, 999).map {|s| [s[0].to_s, 'w', 'l', 'close']}.flatten).join(',')
   puts final_rows.map {|r| r.join(', ')}.join("\n")
 end
 
